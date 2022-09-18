@@ -3,10 +3,61 @@ import React from 'react'
 import { AiOutlinePlus, AiOutlineMinus } from 'react-icons/ai'
 import { BsFillBagCheckFill } from 'react-icons/bs'
 import { AiFillPlusCircle, AiFillMinusCircle, AiOutlineClose } from 'react-icons/ai'
+import Head from 'next/head';
+import Script from 'next/script'
 
-function Checkout({ cart, addToCart, removeFromCart, clearCart, subTotal }) {
+function Checkout({ cart, addToCart, removeFromCart, subTotal }) {
+  const initialPayment = async () => {
+    // let txnToken;
+    let oid = Math.floor(Math.random()* Date.now())
+    // get a transaction token 
+    const data = { cart, subTotal, oid, email: "email" };
+
+    let a = await fetch(`${process.env.NEXT_PUBLIC_HOST}/api/pretransaction`, {
+      method: 'POST', // or 'PUT'
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      
+    })
+    console.log(a)
+     let txnToken = await a.json()
+     console.log(txnToken)
+    var config = {
+      "root": "",
+      "flow": "DEFAULT",
+      "data": {
+        "orderId": oid, /* update order id */
+        "token": txnToken, /* update token value */
+        "tokenType": "TXN_TOKEN",
+        "amount": subTotal /* update amount */
+      },
+      "handler": {
+        "notifyMerchant": function (eventName, data) {
+          console.log("notifyMerchant handler function called");
+          console.log("eventName => ", eventName);
+          console.log("data => ", data);
+        }
+      }
+    };
+    window.Paytm.CheckoutJS.init(config).then(function onSuccess() {
+      // after successfully updating configuration, invoke JS Checkout
+      window.Paytm.CheckoutJS.invoke();
+    }).catch(function onError(error) {
+      console.log("error => ", error);
+    });
+
+
+  }
   return (
     <div>
+      <Head>
+        <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0" />
+      </Head>
+      <Script type="application/javascript" crossOrigin="anonymous" src={`${process.env.NEXT_PUBLIC_PAYTM_HOST}/merchantpgpui/checkoutjs/merchants/${process.env.NEXT_PUBLIC_PAYTM_MID}.js`} />
+
+      {/* <Script type="application/javascript" src={`${process.env.NEXT_PUBLIC_PAYTM_HOST}/merchantpgpui/checkoutjs/merchants/${process.env.NEXT_PUBLIC_PAYTM_MID}.js" onload="onScriptLoad();`} crossorigin="anonymous"></Script> */}
       <div className="container px-2 sm:m-auto min-h-screen pb-8">
         <div className="Toastify" />
         <h1 className="font-bold text-3xl my-8 text-center">Checkout</h1>
@@ -53,7 +104,7 @@ function Checkout({ cart, addToCart, removeFromCart, clearCart, subTotal }) {
                   return (
                     <li key={k}>
                       <div className="item flex my-5">
-                        <div className=' w-2/3 font-semibold'>{cart[k].name}</div>
+                        <div className=' w-2/3 font-semibold'>{cart[k].name}({cart[k].size}/{cart[k].varient})</div>
                         <div className=' flex items-center justify-center w-1/3 text-lg  '>
                           <AiFillMinusCircle onClick={() => { removeFromCart(k, 1, cart[k].price, cart[k].name, cart[k].size, cart[k].varient) }} className=' cursor-pointer text-pink-500' /><span className='mx-2'>{cart[k].qty}</span>
                           <AiFillPlusCircle onClick={() => { addToCart(k, 1, cart[k].price, cart[k].name, cart[k].size, cart[k].varient) }} className=' cursor-pointer text-pink-500' /></div>
@@ -95,12 +146,14 @@ function Checkout({ cart, addToCart, removeFromCart, clearCart, subTotal }) {
               </div>
             </div>
           </div> */}
-          <button disabled className="flex items-center justify-center mr-2 text-white bg-pink-500 border-0 py-2 px-2 focus:outline-none hover:bg-pink-600 rounded text-sm disabled:bg-pink-300 ">
-            <svg className="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium m-1 css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="ShoppingBagIcon">
+          <Link href={'/checkout'}>
+            <button className="flex items-center justify-center mr-2 text-white bg-pink-500 border-0 py-2 px-2 focus:outline-none hover:bg-pink-600 rounded text-sm disabled:bg-pink-300 " onClick={initialPayment}>
+              {/* <svg className="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium m-1 css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="ShoppingBagIcon">
               <path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8 4c0 .55-.45 1-1 1s-1-.45-1-1V8h2v2zm2-6c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm4 6c0 .55-.45 1-1 1s-1-.45-1-1V8h2v2z" />
-            </svg>
-            Pay ₹449
-          </button>
+            </svg> */}
+              Pay {subTotal}
+            </button>
+          </Link>
         </div>
       </div>
     </div>
@@ -108,3 +161,5 @@ function Checkout({ cart, addToCart, removeFromCart, clearCart, subTotal }) {
 }
 
 export default Checkout
+
+
